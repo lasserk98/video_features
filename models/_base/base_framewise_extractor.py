@@ -1,4 +1,5 @@
 import os
+from contextlib import nullcontext
 from typing import Dict, Union, List
 
 import cv2
@@ -26,6 +27,7 @@ class BaseFrameWiseExtractor(BaseExtractor):
                  extraction_fps: Union[None, int],
                  extraction_total: Union[None, int],
                  show_pred: bool,
+                 use_amp: bool = False,
                  ) -> None:
         # init the BaseExtractor
         super().__init__(
@@ -43,6 +45,7 @@ class BaseFrameWiseExtractor(BaseExtractor):
         self.extraction_total = extraction_total
         self.output_feat_keys = [self.feature_type, 'fps', 'timestamps_ms']
         self.show_pred = show_pred
+        self.use_amp = use_amp
 
     @torch.no_grad()
     def extract(self, video_path: str) -> Dict[str, np.ndarray]:
@@ -83,8 +86,10 @@ class BaseFrameWiseExtractor(BaseExtractor):
     def run_on_a_batch(self, batch: List[torch.Tensor]) -> torch.Tensor:
         model = self.name2module['model']
         # e.g for ResNet, batch is (B, C, H, W),
-        batch = torch.cat(batch).to(self.device)
-        # (B, D)
-        batch_feats = model(batch)
+        batch = torch.cat(batch).to(self.device, non_blocking=True)
+        autocast = torch.cuda.amp.autocast if ('cuda' in str(self.device) and torch.cuda.is_available()) else nullcontext
+        with torch.inference_mode():
+            with autocast(enabled=self.use_amp):
+                batch_feats = model(batch)
         self.maybe_show_pred(batch_feats)
         return batch_feats

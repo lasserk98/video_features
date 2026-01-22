@@ -27,6 +27,7 @@ class ExtractCLIP(BaseFrameWiseExtractor):
             extraction_fps=args.extraction_fps,
             extraction_total=args.extraction_total,
             show_pred=args.show_pred,
+            use_amp=getattr(args, 'use_amp', False),
         )
         self.transforms = 'For CLIP, it is easier to define in .load_model method because we need input size'
         if self.show_pred:
@@ -38,7 +39,13 @@ class ExtractCLIP(BaseFrameWiseExtractor):
                 self.pred_texts = list(pred_texts)
             # .long() is required because torch.nn.Embedding allows only Longs for pytorch 1.7.1
             self.pred_texts_tok = clip.tokenize(self.pred_texts).long()
+        self.cached_text_feats = None
         self.name2module = self.load_model()
+        if self.show_pred:
+            with torch.inference_mode():
+                self.cached_text_feats = self.name2module['model.encode_text'](
+                    self.pred_texts_tok.to(self.device)
+                )
 
     def load_model(self) -> Dict[str, torch.nn.Module]:
         """Defines the models, loads checkpoints, sends them to the device.
@@ -87,12 +94,15 @@ class ExtractCLIP(BaseFrameWiseExtractor):
         # for each batch we will compute text representation: it is a bit redundant but it only
         # creates a problem during `show_pred`, i.e. debugging. It is not a big deal
         if self.show_pred:
-            # to(device) is called here (instead of __init__) because device is defined in .extract()
-            text_feats = self.name2module['model.encode_text'](self.pred_texts_tok.to(self.device))
+            if self.cached_text_feats is None:
+                with torch.inference_mode():
+                    self.cached_text_feats = self.name2module['model.encode_text'](
+                        self.pred_texts_tok.to(self.device)
+                    )
 
             # visual_feats:T, 512  text_feats:N, 512
             visual_feats = visual_feats.to(device=self.device, dtype=torch.double)
-            text_feats = text_feats.to(dtype=torch.double)
+            text_feats = self.cached_text_feats.to(dtype=torch.double)
 
             # normalized features
             visual_feats = visual_feats / visual_feats.norm(dim=1, keepdim=True)

@@ -29,6 +29,7 @@ class ExtractTIMM(BaseFrameWiseExtractor):
             extraction_fps=args.extraction_fps,
             extraction_total=args.extraction_total,
             show_pred=args.show_pred,
+            use_amp=getattr(args, 'use_amp', False),
         )
 
         # transform must be implemented in _create_model
@@ -50,7 +51,6 @@ class ExtractTIMM(BaseFrameWiseExtractor):
         # transforms
         self.transforms = create_transform(**resolve_data_config(model.pretrained_cfg, model=model))
         self.transforms = Compose([lambda np_array: Image.fromarray(np_array), self.transforms])
-        print(self.transforms)
 
         model.to(self.device)
         model.eval()

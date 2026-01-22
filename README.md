@@ -93,6 +93,11 @@ Output is defined by the `on_extraction` argument; by default it prints the feat
 Possible values of output are `['print', 'save_numpy', 'save_pickle']`. `save_*` options save the features in
 the `output_path` folder with the same name as the input video file but with the `.npy` or `.pkl` extension.
 
+Custom checkpoints
+------------------
+- ResNet: set `checkpoint_path` (and optionally `auto_convert_checkpoint`) in [configs/resnet.yml](configs/resnet.yml) to load custom or Lightning checkpoints; defaults to torchvision pretrained when unset.
+- Converter CLI: `python tools/convert_checkpoint.py --in your.ckpt --out cleaned.pth --model resnet` strips common prefixes (module./encoder./model.) and drops classifier heads by default.
+
 ## Used in
 
 * [SpecVQGAN](https://arxiv.org/abs/2110.08791) branch `specvqgan`

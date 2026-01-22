@@ -1,13 +1,16 @@
 # Model
 feature_type: 'resnet'
 model_name: 'resnet50' # resnet18 resnet34 resnet50 resnet101 resnet151
+checkpoint_path: null # optional custom checkpoint (.pth/.pt/.ckpt); if null uses torchvision pretrained
+auto_convert_checkpoint: true # if true, strip common prefixes and heads for Lightning checkpoints
+use_amp: false # mixed precision for faster GPU inference
 batch_size: 1 # Batchsize (only frame-wise extractors are supported)
 extraction_fps: null # For original video fps, leave unspecified "null" (None)
 extraction_total: null # extract a fix number of frames. It is mutually exclusive with "fps"
 
 # Extraction Parameters
 device: 'cuda:0'  # device as in `torch`, can be 'cpu'
-on_extraction: 'print'  # what to do once the features are extracted. Can be ['print', 'save_numpy', 'save_pickle']
+on_extraction: 'save_numpy'  # what to do once the features are extracted. Can be ['print', 'save_numpy', 'save_pickle']
 output_path: './output' # where to store results if saved
 tmp_path: './tmp' # folder to store the temporary files used for extraction (frames or aud files)
 keep_tmp_files: false # to keep temp files after feature extraction.
@@ -17,5 +20,5 @@ show_pred: false # to show preds of a model, i.e. on a pre-train dataset for eac
 config: null
 
 # Video paths
-video_paths: null
+video_paths: [/data/hdd02/MHB_OPPhasen/Videos/001-066-2/001-066-2.mp4] #null
 file_with_video_paths: null # if the list of videos is large, you might put them in a txt file, use this argument to specify the path
