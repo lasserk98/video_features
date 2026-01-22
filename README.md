@@ -96,6 +96,7 @@ the `output_path` folder with the same name as the input video file but with the
 Custom checkpoints
 ------------------
 - ResNet: set `checkpoint_path` (and optionally `auto_convert_checkpoint`) in [configs/resnet.yml](configs/resnet.yml) to load custom or Lightning checkpoints; defaults to torchvision pretrained when unset.
+- Save cutom checkpoints under [models/resnet/custom_checkpoints](models/resnet/custom_checkpoints/) to prevent adding them to git
 - Converter CLI: `python tools/convert_checkpoint.py --in your.ckpt --out cleaned.pth --model resnet` strips common prefixes (module./encoder./model.) and drops classifier heads by default.
 
 ## Used in
