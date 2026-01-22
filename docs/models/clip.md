@@ -42,6 +42,9 @@ python main.py \
 | <div style="width: 12em">Argument</div> | <div style="width: 8em">Default</div> | Description                                                                                                                                                                                                                     |
 | --------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `model_name`                            | `"ViT-B/32"`                          | A variant of CLIP. `"ViT-B/16"`, `"RN50x16"`, `"RN50x4"`, `"RN101"`, `"RN50"`, and `"custom"` are supported.                                                                                                                    |
+| `checkpoint_path`                       | `null`                                | Path to a custom CLIP checkpoint (`.pth/.pt/.ckpt`). If set, the model is loaded from this path instead of OpenAI weights.                                                                                                      |
+| `auto_convert_checkpoint`               | `true`                                | If `true`, strips common prefixes and classifier heads when loading Lightning checkpoints. Disable if your checkpoint is already a plain state_dict.                                                                             |
+| `use_amp`                               | `false`                               | Enable mixed precision for faster GPU inference.                                                                                                                                                                               |
 | `batch_size`                            | `1`                                   | You may speed up extraction of features by increasing the batch size as much as your GPU permits.                                                                                                                               |
 | `extraction_fps`                        | `null`                                | If specified (e.g. as `5`), the video will be re-encoded to the `extraction_fps` fps. Leave unspecified or `null` to skip re-encoding.                                                                                          |
 | `device`                                | `"cuda:0"`                            | The device specification. It follows the PyTorch style. Use `"cuda:3"` for the 4th GPU on the machine or `"cpu"` for CPU-only.                                                                                                  |
@@ -68,8 +71,7 @@ conda activate video_features
 It is pretty much the same procedure as with other features.
 Here we take `ViT/B-32` as an example, but we also support `ViT-B/16`, `RN50x16`, `RN50x4`, `RN101`, `RN50`
 and others in [OpenAI CLIP implementation](https://github.com/openai/CLIP).
-In addition, if you want to use your weights, you need to copy your weights to
-`models/clip/checkpoints`, rename it `CLIP-custom.pth` and specify `model_name=custom`.
+If you want to use your own weights, set `checkpoint_path` to your `.pth/.pt/.ckpt`; Lightning checkpoints are auto-converted by default. The legacy path with `model_name=custom` still works if you place weights at [models/clip/checkpoints/CLIP-custom.pth](models/clip/checkpoints/CLIP-custom.pth).
 ```bash
 python main.py \
     feature_type="clip" \

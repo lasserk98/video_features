@@ -1,5 +1,8 @@
 # Model
 feature_type: 'i3d'
+checkpoint_path_rgb: null # optional custom RGB checkpoint (.pth/.pt/.ckpt); if null uses default weights
+checkpoint_path_flow: null # optional custom Flow checkpoint (.pth/.pt/.ckpt); if null uses default weights
+flow_xtr_checkpoint_path: null # optional RAFT checkpoint override for flow extraction
 stack_size: 64 # Feature time span in frames
 step_size: 64 # Feature step size in frames
 streams: null # Streams to use for feature extraction (e.g. 'rgb' or 'flow'). Both used if left as "null" (None)

@@ -31,6 +31,9 @@ You may check if the predicted distribution satisfies your requirements for an a
 | `step_size`                             | `64`                                  | The number of frames to step before extracting the next features.                                                                                                                |
 | `streams`                               | `null`                                | I3D is a two-stream network. By default (`null` or omitted) both RGB and flow streams are used. To use RGB- or flow-only models use `rgb` or `flow`.                             |
 | `flow_type`                             | `raft`                                 | By default, the flow-features of I3D will be calculated using optical from calculated with RAFT (originally with TV-L1).                    |
+| `checkpoint_path_rgb`                   | `null`                                | Optional RGB stream checkpoint (`.pth/.pt/.ckpt`). If set, overrides the default RGB weights.                                                                                    |
+| `checkpoint_path_flow`                  | `null`                                | Optional flow stream checkpoint (`.pth/.pt/.ckpt`). If set, overrides the default flow weights.                                                                                  |
+| `flow_xtr_checkpoint_path`              | `null`                                | Optional checkpoint for the optical flow extractor (RAFT). Defaults to the bundled Sintel/KITTI weights based on `flow_type`.                                                    |
 | `extraction_fps`                        | `null`                                | If specified (e.g. as `5`), the video will be re-encoded to the `extraction_fps` fps. Leave unspecified or `null` to skip re-encoding.                                           |
 | `device`                                | `"cuda:0"`                            | The device specification. It follows the PyTorch style. Use `"cuda:3"` for the 4th GPU on the machine or `"cpu"` for CPU-only.                                                   |
 | `video_paths`                           | `null`                                | A list of videos for feature extraction. E.g. `"[./sample/v_ZNVhz7ctTq0.mp4, ./sample/v_GGSY1Qvo990.mp4]"` or just one path `"./sample/v_GGSY1Qvo990.mp4"`.                      |
@@ -62,6 +65,8 @@ python main.py \
     video_paths="[./sample/v_GGSY1Qvo990.mp4]" \
     show_pred=true
 ```
+
+To override weights, set `checkpoint_path_rgb` and/or `checkpoint_path_flow` to your checkpoints. You can also swap the optical flow extractor by pointing `flow_xtr_checkpoint_path` to another RAFT checkpoint.
 
 ---
 

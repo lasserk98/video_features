@@ -11,6 +11,18 @@ from utils.io import reencode_video_with_diff_fps
 from utils.utils import form_slices, show_predictions_on_dataset
 
 
+def _load_checkpoint_state(path: str):
+    obj = torch.load(path, map_location='cpu')
+    if isinstance(obj, dict):
+        for key in ['state_dict', 'model_state_dict', 'module', 'model']:
+            if key in obj and isinstance(obj[key], dict):
+                obj = obj[key]
+                break
+    if not isinstance(obj, dict):
+        raise ValueError(f"Unsupported checkpoint format at {path}")
+    return obj
+
+
 class ExtractS3D(BaseExtractor):
 
     def __init__(self, args) -> None:
@@ -34,6 +46,7 @@ class ExtractS3D(BaseExtractor):
             CenterCrop((224, 224))
         ])
         self.show_pred = args.show_pred
+        self.checkpoint_path = getattr(args, 'checkpoint_path', None)
         self.output_feat_keys = [self.feature_type]
         self.name2module = self.load_model()
 
@@ -84,7 +97,15 @@ class ExtractS3D(BaseExtractor):
             Dict[str, torch.nn.Module]: model-agnostic dict holding modules for extraction and show_pred
         """
         s3d_kinetics400_weights_torch_path = './models/s3d/checkpoint/S3D_kinetics400_torchified.pt'
-        model = S3D(num_class=400, ckpt_path=s3d_kinetics400_weights_torch_path)
+        ckpt_path = self.checkpoint_path or s3d_kinetics400_weights_torch_path
+        state = _load_checkpoint_state(ckpt_path) if ckpt_path.endswith('.ckpt') else None
+        model = S3D(num_class=400, ckpt_path=ckpt_path)
+        if state:
+            missing, unexpected = model.load_state_dict(state, strict=False)
+            if missing:
+                print(f"[s3d] missing keys from checkpoint: {missing}")
+            if unexpected:
+                print(f"[s3d] unexpected keys in checkpoint: {unexpected}")
         model = model.to(self.device)
         model.eval()
 

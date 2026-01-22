@@ -1,5 +1,6 @@
 # Model
 feature_type: 'vggish'
+checkpoint_path: null # optional custom checkpoint (.pth/.pt/.ckpt); if null uses default weights
 
 # Extraction Parameters
 device: 'cuda:0'  # device as in `torch`, can be 'cpu'

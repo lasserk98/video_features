@@ -14,6 +14,18 @@ from . import clip_src as clip
 
 class ExtractCLIP(BaseFrameWiseExtractor):
 
+    @staticmethod
+    def _load_checkpoint_state(path: str) -> Dict[str, torch.Tensor]:
+        obj = torch.load(path, map_location='cpu')
+        if isinstance(obj, dict):
+            for key in ['state_dict', 'model_state_dict', 'module', 'model']:
+                if key in obj and isinstance(obj[key], dict):
+                    obj = obj[key]
+                    break
+        if not isinstance(obj, dict):
+            raise ValueError(f"Unsupported checkpoint format at {path}")
+        return obj
+
     def __init__(self, args: omegaconf.DictConfig) -> None:
         super().__init__(
             feature_type=args.feature_type,
@@ -40,6 +52,8 @@ class ExtractCLIP(BaseFrameWiseExtractor):
             # .long() is required because torch.nn.Embedding allows only Longs for pytorch 1.7.1
             self.pred_texts_tok = clip.tokenize(self.pred_texts).long()
         self.cached_text_feats = None
+        self.checkpoint_path = args.get('checkpoint_path', None)
+        self.auto_convert_checkpoint = args.get('auto_convert_checkpoint', True)
         self.name2module = self.load_model()
         if self.show_pred:
             with torch.inference_mode():
@@ -57,19 +71,26 @@ class ExtractCLIP(BaseFrameWiseExtractor):
         Returns:
             Dict[str, torch.nn.Module]: model-agnostic dict holding modules for extraction and show_pred
         """
-        if self.model_name in clip.available_models():
+        if self.checkpoint_path:
+            model_path = self.checkpoint_path
+            model, _ = clip.load(str(model_path), device=self.device)
+            if self.auto_convert_checkpoint:
+                state = self._load_checkpoint_state(model_path)
+                missing, unexpected = model.load_state_dict(state, strict=False)
+                if missing:
+                    print(f"[clip] missing keys from checkpoint: {missing}")
+                if unexpected:
+                    print(f"[clip] unexpected keys in checkpoint: {unexpected}")
+        elif self.model_name in clip.available_models():
             model_path = self.model_name
+            model, _ = clip.load(str(model_path), device=self.device)
         elif self.model_name == 'custom':
-            # Reserved methods for using custom weights
-            # *There is a bug in original repo when loading not-jit weights,
-            # *and ignore it for now.
             model_path = pathlib.Path(__file__).parent / 'checkpoints' / 'CLIP-custom.pth'
             if not model_path.exists():
                 raise FileNotFoundError(f'{model_path}')
+            model, _ = clip.load(str(model_path), device=self.device)
         else:
             raise NotImplementedError(f'Model {self.model_name} not found')
-
-        model, _ = clip.load(str(model_path), device=self.device)
         model.eval()
 
         # defining transforms

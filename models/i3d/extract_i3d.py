@@ -61,6 +61,9 @@ class ExtractI3D(BaseExtractor):
             ])
         }
         self.show_pred = args.show_pred
+        self.rgb_checkpoint_path = getattr(args, 'checkpoint_path_rgb', None)
+        self.flow_checkpoint_path = getattr(args, 'checkpoint_path_flow', None)
+        self.flow_xtr_checkpoint_path = getattr(args, 'flow_xtr_checkpoint_path', None)
         self.output_feat_keys = self.streams + ['fps', 'timestamps_ms']
         self.name2module = self.load_model()
 
@@ -189,7 +192,8 @@ class ExtractI3D(BaseExtractor):
             else:
                 raise NotImplementedError(f'Flow model {self.flow_type} is not implemented')
             # Preprocess state dict
-            state_dict = torch.load(flow_model_paths[self.flow_type], map_location='cpu')
+            flow_ckpt = self.flow_xtr_checkpoint_path or flow_model_paths[self.flow_type]
+            state_dict = torch.load(flow_ckpt, map_location='cpu')
             state_dict = dp_state_to_normal(state_dict)
             flow_xtr_model.load_state_dict(state_dict)
             flow_xtr_model = flow_xtr_model.to(self.device)
@@ -200,7 +204,12 @@ class ExtractI3D(BaseExtractor):
         i3d_stream_models = {}
         for stream in self.streams:
             i3d_stream_model = I3D(num_classes=self.i3d_classes_num, modality=stream)
-            i3d_stream_model.load_state_dict(torch.load(i3d_weights_paths[stream], map_location='cpu'))
+            stream_ckpt = i3d_weights_paths[stream]
+            if stream == 'rgb' and self.rgb_checkpoint_path:
+                stream_ckpt = self.rgb_checkpoint_path
+            if stream == 'flow' and self.flow_checkpoint_path:
+                stream_ckpt = self.flow_checkpoint_path
+            i3d_stream_model.load_state_dict(torch.load(stream_ckpt, map_location='cpu'))
             i3d_stream_model = i3d_stream_model.to(self.device)
             i3d_stream_model.eval()
             i3d_stream_models[stream] = i3d_stream_model

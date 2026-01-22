@@ -9,6 +9,18 @@ from models.vggish.vggish_src.vggish_slim import VGGish
 from utils.utils import extract_wav_from_mp4
 
 
+def _load_checkpoint_state(path: str):
+    obj = torch.load(path, map_location='cpu')
+    if isinstance(obj, dict):
+        for key in ['state_dict', 'model_state_dict', 'module', 'model']:
+            if key in obj and isinstance(obj[key], dict):
+                obj = obj[key]
+                break
+    if not isinstance(obj, dict):
+        raise ValueError(f"Unsupported checkpoint format at {path}")
+    return obj
+
+
 class ExtractVGGish(BaseExtractor):
 
     def __init__(self, args) -> None:
@@ -24,6 +36,7 @@ class ExtractVGGish(BaseExtractor):
         # (Re-)Define arguments for this class
         if args.show_pred:
             raise NotImplementedError
+        self.checkpoint_path = getattr(args, 'checkpoint_path', None)
         self.output_feat_keys = [self.feature_type]
         self.name2module = self.load_model()
 
@@ -69,6 +82,13 @@ class ExtractVGGish(BaseExtractor):
             {Dict[str, torch.nn.Module]}: model-agnostic dict holding modules for extraction
         """
         model = VGGish()
+        if self.checkpoint_path:
+            state = _load_checkpoint_state(self.checkpoint_path)
+            missing, unexpected = model.load_state_dict(state, strict=False)
+            if missing:
+                print(f"[vggish] missing keys from checkpoint: {missing}")
+            if unexpected:
+                print(f"[vggish] unexpected keys from checkpoint: {unexpected}")
         model = model.to(self.device)
         model.eval()
         return {'model': model}

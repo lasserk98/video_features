@@ -14,6 +14,33 @@ from utils.io import reencode_video_with_diff_fps
 from utils.utils import form_slices, show_predictions_on_dataset
 
 
+def _load_checkpoint_state(path: str) -> Dict[str, torch.Tensor]:
+    obj = torch.load(path, map_location='cpu')
+    if isinstance(obj, dict):
+        for key in ['state_dict', 'model_state_dict', 'module', 'model']:
+            if key in obj and isinstance(obj[key], dict):
+                obj = obj[key]
+                break
+    if not isinstance(obj, dict):
+        raise ValueError(f"Unsupported checkpoint format at {path}")
+    return obj
+
+
+def _clean_state_dict(state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    strip_prefixes = ['module.', 'model.', 'encoder.', 'backbone.', 'network.']
+    drop_prefixes = ['fc.', 'head.', 'classifier.', 'heads.']
+    cleaned = {}
+    for k, v in state.items():
+        if any(k.startswith(dp) for dp in drop_prefixes):
+            continue
+        for sp in strip_prefixes:
+            if k.startswith(sp):
+                k = k[len(sp):]
+                break
+        cleaned[k] = v
+    return cleaned
+
+
 class ExtractR21D(BaseExtractor):
 
     def __init__(self, args) -> None:
@@ -51,6 +78,8 @@ class ExtractR21D(BaseExtractor):
         if self.stack_size is None:
             self.stack_size = self.model_def['stack_size']
         self.show_pred = args.show_pred
+        self.checkpoint_path = getattr(args, 'checkpoint_path', None)
+        self.auto_convert_checkpoint = getattr(args, 'auto_convert_checkpoint', True)
         self.output_feat_keys = [self.feature_type]
         self.name2module = self.load_model()
 
@@ -108,14 +137,23 @@ class ExtractR21D(BaseExtractor):
 
         if self.model_name == 'r2plus1d_18_16_kinetics':
             weights_key = 'DEFAULT'
-            model = models.get_model('r2plus1d_18', weights=weights_key)
+            model = models.get_model('r2plus1d_18', weights=None if self.checkpoint_path else weights_key)
         else:
             model = torch.hub.load(
                 self.model_def['repo'],
                 model=self.model_def['model_name_in_repo'],
                 num_classes=self.model_def['num_classes'],
-                pretrained=True,
+                pretrained=False if self.checkpoint_path else True,
             )
+
+        if self.checkpoint_path:
+            raw_state = _load_checkpoint_state(self.checkpoint_path)
+            state = _clean_state_dict(raw_state) if self.auto_convert_checkpoint else raw_state
+            missing, unexpected = model.load_state_dict(state, strict=False)
+            if missing:
+                print(f"[r21d] missing keys from checkpoint: {missing}")
+            if unexpected:
+                print(f"[r21d] unexpected keys in checkpoint: {unexpected}")
 
         model = model.to(self.device)
         model.eval()

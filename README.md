@@ -95,9 +95,9 @@ the `output_path` folder with the same name as the input video file but with the
 
 Custom checkpoints
 ------------------
-- ResNet: set `checkpoint_path` (and optionally `auto_convert_checkpoint`) in [configs/resnet.yml](configs/resnet.yml) to load custom or Lightning checkpoints; defaults to torchvision pretrained when unset.
-- Save cutom checkpoints under [models/resnet/custom_checkpoints](models/resnet/custom_checkpoints/) to prevent adding them to git
-- Converter CLI: `python tools/convert_checkpoint.py --in your.ckpt --out cleaned.pth --model resnet` strips common prefixes (module./encoder./model.) and drops classifier heads by default.
+- Frame-wise models: set `checkpoint_path` (and optionally `auto_convert_checkpoint`) in [configs/resnet.yml](configs/resnet.yml), [configs/timm.yml](configs/timm.yml), or [configs/clip.yml](configs/clip.yml) to load custom or Lightning checkpoints; defaults fall back to pretrained weights when unset.
+- Video models: use the model-specific fields in configs — R(2+1)D `checkpoint_path`/`auto_convert_checkpoint` in [configs/r21d.yml](configs/r21d.yml); S3D `checkpoint_path` in [configs/s3d.yml](configs/s3d.yml); I3D `checkpoint_path_rgb` / `checkpoint_path_flow` / `flow_xtr_checkpoint_path` in [configs/i3d.yml](configs/i3d.yml); RAFT `checkpoint_path` override in [configs/raft.yml](configs/raft.yml); VGGish `checkpoint_path` in [configs/vggish.yml](configs/vggish.yml).
+- Converter CLI: `python tools/convert_checkpoint.py --in your.ckpt --out cleaned.pth --model resnet|timm|generic` strips common prefixes (module./encoder./model./backbone./network.) and optionally drops classifier heads when your checkpoint format differs from the target model.
 
 ## Used in
 

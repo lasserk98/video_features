@@ -16,6 +16,33 @@ except ImportError:
 
 class ExtractTIMM(BaseFrameWiseExtractor):
 
+    @staticmethod
+    def _load_checkpoint_state(path: str) -> Dict[str, torch.Tensor]:
+        obj = torch.load(path, map_location='cpu')
+        if isinstance(obj, dict):
+            for key in ['state_dict', 'model_state_dict', 'module', 'model']:
+                if key in obj and isinstance(obj[key], dict):
+                    obj = obj[key]
+                    break
+        if not isinstance(obj, dict):
+            raise ValueError(f"Unsupported checkpoint format at {path}")
+        return obj
+
+    @staticmethod
+    def _clean_state_dict(state: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        strip_prefixes = ['module.', 'model.', 'encoder.', 'backbone.', 'network.']
+        drop_prefixes = ['fc.', 'head.', 'classifier.', 'heads.']
+        cleaned = {}
+        for k, v in state.items():
+            if any(k.startswith(dp) for dp in drop_prefixes):
+                continue
+            for sp in strip_prefixes:
+                if k.startswith(sp):
+                    k = k[len(sp):]
+                    break
+            cleaned[k] = v
+        return cleaned
+
     def __init__(self, args: omegaconf.DictConfig) -> None:
         super().__init__(
             feature_type=args.feature_type,
@@ -34,6 +61,8 @@ class ExtractTIMM(BaseFrameWiseExtractor):
 
         # transform must be implemented in _create_model
         self.transforms = None
+        self.checkpoint_path = args.get('checkpoint_path', None)
+        self.auto_convert_checkpoint = args.get('auto_convert_checkpoint', True)
         self.name2module = self.load_model()
 
     def load_model(self) -> Dict[str, torch.nn.Module]:
@@ -46,7 +75,16 @@ class ExtractTIMM(BaseFrameWiseExtractor):
         Returns:
             Dict[str, torch.nn.Module]: model-agnostic dict holding modules for extraction and show_pred
         """
-        model = timm.create_model(self.model_name, pretrained=True)
+        model = timm.create_model(self.model_name, pretrained=self.checkpoint_path is None)
+
+        if self.checkpoint_path:
+            raw_state = self._load_checkpoint_state(self.checkpoint_path)
+            state = self._clean_state_dict(raw_state) if self.auto_convert_checkpoint else raw_state
+            missing, unexpected = model.load_state_dict(state, strict=False)
+            if missing:
+                print(f"[timm] missing keys from checkpoint: {missing}")
+            if unexpected:
+                print(f"[timm] unexpected keys in checkpoint: {unexpected}")
 
         # transforms
         self.transforms = create_transform(**resolve_data_config(model.pretrained_cfg, model=model))

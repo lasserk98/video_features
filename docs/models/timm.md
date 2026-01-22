@@ -11,7 +11,10 @@ specifically [model summaries](https://huggingface.co/docs/timm/models) and
 <!-- the <div> makes columns wider -->
 | <div style="width: 12em">Argument</div> | <div style="width: 8em">Default</div> | Description                                                                                                                                                                      |
 | --------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model_name`                            | `null`                            | Any model from `timm.list_pretrained()`, e.g. `efficientnet_b0` or `efficientnet_b0.ra_in1k`.                                                                                     |
+| `model_name`                            | `null`                                | Any model from `timm.list_pretrained()`, e.g. `efficientnet_b0` or `efficientnet_b0.ra_in1k`.                                                                                    |
+| `checkpoint_path`                       | `null`                                | Path to a custom timm checkpoint (`.pth/.pt/.ckpt`). If set, the model is loaded from this path instead of timm pretrained weights.                                              |
+| `auto_convert_checkpoint`               | `true`                                | If `true`, strips common prefixes and classifier heads when loading Lightning checkpoints. Disable if your checkpoint is already a plain state_dict.                              |
+| `use_amp`                               | `false`                               | Enable mixed precision for faster GPU inference.                                                                                                                                 |
 | `batch_size`                            | `1`                                   | You may speed up extraction of features by increasing the batch size as much as your GPU permits.                                                                                |
 | `extraction_fps`                        | `null`                                | If specified (e.g. as `5`), the video will be re-encoded to the `extraction_fps` fps. Leave unspecified or `null` to skip re-encoding.                                           |
 | `device`                                | `"cuda:0"`                            | The device specification. It follows the PyTorch style. Use `"cuda:3"` for the 4th GPU on the machine or `"cpu"` for CPU-only.                                                   |
@@ -42,6 +45,11 @@ python main.py \
     model_name=efficientnet_b0.ra_in1k \
     device="cuda:0" \
     video_paths="[./sample/v_GGSY1Qvo990.mp4]"
+```
+
+To load your own weights, point `checkpoint_path` to your `.pth/.pt/.ckpt`; Lightning checkpoints are auto-converted unless you set `auto_convert_checkpoint=false`. The converter helper can also pre-clean checkpoints:
+```bash
+python tools/convert_checkpoint.py --in your.ckpt --out cleaned.pth --model timm
 ```
 
 If you'd like to check the model's outputs on a downstream task (ImageNet 1K or 21K), you can use `show_pred` argument.

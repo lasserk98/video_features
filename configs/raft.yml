@@ -1,5 +1,6 @@
 # Model
 feature_type: 'raft'
+checkpoint_path: null # optional custom checkpoint (.pth/.pt/.ckpt); if null uses finetuned_on preset
 extraction_fps: null # For original video fps, leave as "null" (None)
 extraction_total: null # extract a fix number of frames. It is mutually exclusive with "fps"
 side_size: null # if resized to the smaller edge, min(W, H) = side_size, if to the larger: max(W, H), if "null" (None) no resize is performed

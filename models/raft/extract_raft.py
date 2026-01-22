@@ -19,7 +19,7 @@ class ExtractRAFT(BaseOpticalFlowExtractor):
             output_path=args.output_path,
             keep_tmp_files=args.keep_tmp_files,
             device=args.device,
-            ckpt_path=DATASET_to_RAFT_CKPT_PATHS[args.finetuned_on],
+            ckpt_path=getattr(args, 'checkpoint_path', None) or DATASET_to_RAFT_CKPT_PATHS[args.finetuned_on],
             batch_size=args.batch_size,
             resize_to_smaller_edge=args.resize_to_smaller_edge,
             side_size=args.side_size,
